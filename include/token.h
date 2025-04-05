@@ -16,7 +16,7 @@ struct Token {
     int line;
     int column;
 
-    Token(TokenType t, std::string  l, int ln, int col)
+    Token(TokenType t, std::string l, int ln, int col)
             : type(t), lexeme(std::move(l)), line(ln), column(col) {}
 };
 

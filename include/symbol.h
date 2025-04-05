@@ -8,6 +8,8 @@
 #include <string>
 #include <optional>
 
+#include "types.h"
+
 enum class SymbolType {
     Variable,
     Function,
@@ -20,15 +22,15 @@ enum class SymbolType {
 
 struct Symbol {
     std::string name;
-    SymbolType  type;
+    SymbolType type;
+    std::shared_ptr<Type> declaredType;
 
     bool isMutable;
-
     int line;
     int column;
 
-    Symbol(std::string n, SymbolType k, const std::string& t, bool mut, int ln, int col)
-            : name(std::move(n)), type(k), isMutable(mut), line(ln), column(col) {}
+    Symbol(std::string n, SymbolType k, std::shared_ptr<Type> t, bool mut, int ln, int col)
+            : name(std::move(n)), type(k), declaredType(std::move(t)), isMutable(mut), line(ln), column(col) {}
 };
 
 #endif //COMPILER_SYMBOL_H

@@ -37,9 +37,51 @@ std::vector<Token> Tokenizer::tokenize() {
       }
 
       switch (c) {
-         case '+': advance(); tokens.push_back(makeToken(TokenType::PLUS)); continue;
-         case '-': advance(); tokens.push_back(makeToken(TokenType::MINUS)); continue;
-         case '*': advance(); tokens.push_back(makeToken(TokenType::MULTIPLY)); continue;
+         // TODO: Duplicated log
+         case '(':
+            advance();
+            tokens.push_back(makeToken(TokenType::LEFT_PAREN));
+            continue;
+         case ')':
+            advance();
+            tokens.push_back(makeToken(TokenType::RIGHT_PAREN));
+            continue;
+         case '{':
+            advance();
+            tokens.push_back(makeToken(TokenType::LEFT_BRACE));
+            continue;
+         case '}':
+            advance();
+            tokens.push_back(makeToken(TokenType::RIGHT_BRACE));
+            continue;
+         case ';':
+            advance();
+            tokens.push_back(makeToken(TokenType::SEMICOLON));
+            continue;
+         case ',':
+            advance();
+            tokens.push_back(makeToken(TokenType::COMMA));
+            continue;
+         case '^':
+            advance();
+            tokens.push_back(makeToken(TokenType::BITWISE_XOR));
+            break;
+         case '~':
+            advance();
+            tokens.push_back(makeToken(TokenType::BITWISE_NOT));
+            break;
+         case '+':
+            advance();
+            tokens.push_back(makeToken(TokenType::PLUS));
+            continue;
+         case '-':
+            advance();
+            tokens.push_back(makeToken(TokenType::MINUS));
+            continue;
+         case '*':
+            advance();
+            tokens.push_back(makeToken(TokenType::MULTIPLY));
+            continue;
          case '/':
             advance();
             if (peek() == '/') {
@@ -52,20 +94,12 @@ std::vector<Token> Tokenizer::tokenize() {
                   if (peek() == '\0') break;
                   advance();
                }
-               advance(); advance();
+               advance();
+               advance();
                continue;
             }
             tokens.push_back(makeToken(TokenType::DIVIDE));
             continue;
-
-         case '=': advance(); tokens.push_back(makeToken(match('=') ? TokenType::EQUAL : TokenType::ASSIGN)); continue;
-
-         case '(': advance(); tokens.push_back(makeToken(TokenType::LEFT_PAREN)); continue;
-         case ')': advance(); tokens.push_back(makeToken(TokenType::RIGHT_PAREN)); continue;
-         case '{': advance(); tokens.push_back(makeToken(TokenType::LEFT_BRACE)); continue;
-         case '}': advance(); tokens.push_back(makeToken(TokenType::RIGHT_BRACE)); continue;
-         case ';': advance(); tokens.push_back(makeToken(TokenType::SEMICOLON)); continue;
-         case ',': advance(); tokens.push_back(makeToken(TokenType::COMMA)); continue;
          case '!':
             advance();
             if (match('=')) {
@@ -106,15 +140,10 @@ std::vector<Token> Tokenizer::tokenize() {
                tokens.push_back(makeToken(TokenType::BITWISE_OR));
             }
             break;
-         case '^':
+         case '=':
             advance();
-            tokens.push_back(makeToken(TokenType::BITWISE_XOR));
-            break;
-         case '~':
-            advance();
-            tokens.push_back(makeToken(TokenType::BITWISE_NOT));
-            break;
-
+            tokens.push_back(makeToken(match('=') ? TokenType::EQUAL : TokenType::ASSIGN));
+            continue;
 
          default:
             // TODO: Handle unknown characters
@@ -192,23 +221,42 @@ Token Tokenizer::makeToken(TokenType type) const {
 }
 
 Token Tokenizer::string() {
-   std::string lexeme;
    advance();
 
+
    while (peek() != '"' && peek() != '\0') {
+      if (peek() == '\n') {
+         throw SyntaxError("Unterminated string literal", line, column);
+      }
+
       if (peek() == '\\') {
          advance();
-         if (peek() == 'n') {
-            lexeme += '\n';
-         } else if (peek() == 't') {
-            lexeme += '\t';
-         } else {
-            lexeme += peek();
+         switch (peek()) {
+            case 'n':
+               advance();
+               break;
+            case 't':
+               advance();
+               break;
+            case 'r':
+               advance();
+               break;
+            case '\\':
+               advance();
+               break;
+            case '"':
+               advance();
+               break;
+            default:
+               throw SyntaxError("Invalid escape sequence", line, column);
          }
       } else {
-         lexeme += peek();
+         advance();
       }
-      advance();
+   }
+
+   if (peek() == '\0') {
+      throw SyntaxError("Unterminated string literal", line, column);
    }
 
    advance();
@@ -216,24 +264,18 @@ Token Tokenizer::string() {
 }
 
 Token Tokenizer::number() {
-   std::string lexeme;
-
    while (std::isdigit(peek())) {
-      lexeme += peek();
       advance();
    }
-
    return makeToken(TokenType::INTEGER_LITERAL);
 }
 
 Token Tokenizer::identifier() {
-   std::string lexeme;
-
    while (std::isalnum(peek()) || peek() == '_') {
-      lexeme += peek();
       advance();
    }
 
+   std::string lexeme = source.substr(start, current - start);
    static const std::unordered_map<std::string, TokenType> keywords = {
            {"if",       TokenType::IF},
            {"else",     TokenType::ELSE},
@@ -257,13 +299,10 @@ Token Tokenizer::identifier() {
            {"default",  TokenType::DEFAULT},
            {"try",      TokenType::TRY},
            {"catch",    TokenType::CATCH},
-           {"finally",  TokenType::FINALLY},
+           {"finally",  TokenType::FINALLY}
    };
 
    auto it = keywords.find(lexeme);
-   if (it != keywords.end()) {
-      return {it->second, lexeme, line, column};
-   }
-
-   return {TokenType::IDENTIFIER, lexeme, line, column};
+   TokenType type = (it != keywords.end()) ? it->second : TokenType::IDENTIFIER;
+   return {type, lexeme, line, column};
 }

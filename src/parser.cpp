@@ -10,7 +10,7 @@
 #include "parser.h"
 #include "error.h"
 
-Parser::Parser(const std::vector<Token>& tokens) : tokens(tokens) {}
+Parser::Parser(const std::vector<Token> &tokens) : tokens(tokens) {}
 
 std::unique_ptr<Expr> Parser::parse() {
    scopeManager.pushScope();
@@ -38,11 +38,11 @@ bool Parser::isAtEnd() const {
    return peek().type == TokenType::END_OF_FILE;
 }
 
-const Token& Parser::peek() const {
+const Token &Parser::peek() const {
    return tokens[current];
 }
 
-const Token& Parser::advance() {
+const Token &Parser::advance() {
    if (!isAtEnd()) current++;
    return tokens[current - 1];
 }
@@ -61,8 +61,10 @@ bool Parser::match(TokenType type) {
 
 int Parser::getPrecedence(TokenType type) {
    switch (type) {
-      case TokenType::OR: return 1;
-      case TokenType::AND: return 2;
+      case TokenType::OR:
+         return 1;
+      case TokenType::AND:
+         return 2;
       case TokenType::EQUAL:
       case TokenType::NOT_EQUAL:
       case TokenType::GREATER_THAN:
@@ -77,7 +79,8 @@ int Parser::getPrecedence(TokenType type) {
       case TokenType::DIVIDE:
       case TokenType::MATRIX_MULTIPLY:
          return 5;
-      default: return -1;
+      default:
+         return -1;
    }
 }
 
@@ -110,6 +113,7 @@ std::unique_ptr<Expr> Parser::expression() {
 
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "ConstantConditionsOC"
+
 std::unique_ptr<Expr> Parser::parsePostfix(std::unique_ptr<Expr> expr) {
    while (true) {
       if (match(TokenType::LEFT_PAREN)) {
@@ -130,7 +134,7 @@ std::unique_ptr<Expr> Parser::parsePostfix(std::unique_ptr<Expr> expr) {
             throw CompilerError("Expected ')' after function arguments", peek().line, peek().column);
          }
 
-         if (auto* id = dynamic_cast<IdentifierExpr*>(expr.get())) {
+         if (auto *id = dynamic_cast<IdentifierExpr *>(expr.get())) {
             expr = std::make_unique<FunctionCallExpr>(
                     id->name, std::move(arguments)
             );
@@ -142,6 +146,7 @@ std::unique_ptr<Expr> Parser::parsePostfix(std::unique_ptr<Expr> expr) {
 
    return expr;
 }
+
 #pragma clang diagnostic pop
 
 std::unique_ptr<Expr> Parser::parseBinaryExpression(int minPrecedence) {
@@ -168,7 +173,7 @@ std::unique_ptr<Expr> Parser::parseBinaryExpression(int minPrecedence) {
       }
 
       if (opType == TokenType::ASSIGN) {
-         if (auto* id = dynamic_cast<IdentifierExpr*>(left.get())) {
+         if (auto *id = dynamic_cast<IdentifierExpr *>(left.get())) {
             left = std::make_unique<AssignmentExpr>(id->name, std::move(right));
          } else {
             throw CompilerError("Invalid assignment target", opToken.line, opToken.column);
@@ -186,23 +191,26 @@ std::unique_ptr<Expr> Parser::parseBinaryExpression(int minPrecedence) {
 }
 
 std::unique_ptr<Expr> Parser::parseUnary() {
-   TokenType t = peek().type;
+   std::vector<Token> unaryOperators;
 
-   if (t == TokenType::PLUS || t == TokenType::MINUS ||
-       t == TokenType::BANG || t == TokenType::BITWISE_NOT ||
-       t == TokenType::INCREMENT || t == TokenType::DECREMENT) {
-
-      Token opToken = advance();
-
-      std::unique_ptr<Expr> right = parseUnary();
-
-      return std::make_unique<UnaryExpr>(
-              opToken.lexeme,
-              std::move(right)
-      );
+   while (true) {
+      TokenType t = peek().type;
+      if (t == TokenType::PLUS || t == TokenType::MINUS ||
+          t == TokenType::BANG || t == TokenType::BITWISE_NOT ||
+          t == TokenType::INCREMENT || t == TokenType::DECREMENT) {
+         unaryOperators.push_back(advance());
+      } else {
+         break;
+      }
    }
 
-   return parsePostfix(primary());
+   std::unique_ptr<Expr> operand = parsePostfix(primary());
+
+   for (auto it = unaryOperators.rbegin(); it != unaryOperators.rend(); ++it) {
+      operand = std::make_unique<UnaryExpr>(it->lexeme, std::move(operand));
+   }
+
+   return operand;
 }
 
 std::unique_ptr<Expr> Parser::primary() {
@@ -215,28 +223,28 @@ std::unique_ptr<Expr> Parser::primary() {
    }
 
    if (match(TokenType::INTEGER_LITERAL)) {
-      const Token& token = tokens[current - 1];
+      const Token &token = tokens[current - 1];
 
       try {
          int value = std::stoi(token.lexeme);
          return std::make_unique<LiteralExpr>(value);
-      } catch (const std::invalid_argument& e) {
+      } catch (const std::invalid_argument &e) {
          throw CompilerError("Invalid integer literal", token.line, token.column);
       }
    }
 
    if (match(TokenType::FLOAT_LITERAL)) {
-      const Token& token = tokens[current - 1];
+      const Token &token = tokens[current - 1];
       return std::make_unique<LiteralExpr>(std::stof(token.lexeme));
    }
 
    if (match(TokenType::STRING_LITERAL)) {
-      const Token& token = tokens[current - 1];
+      const Token &token = tokens[current - 1];
       return std::make_unique<LiteralExpr>(token.lexeme);
    }
 
    if (match(TokenType::BOOLEAN_LITERAL)) {
-      const Token& token = tokens[current - 1];
+      const Token &token = tokens[current - 1];
       bool value = (token.lexeme == "true");
       return std::make_unique<LiteralExpr>(value);
    }
@@ -246,9 +254,9 @@ std::unique_ptr<Expr> Parser::primary() {
    }
 
    if (match(TokenType::IDENTIFIER)) {
-      const Token& token = tokens[current - 1];
+      const Token &token = tokens[current - 1];
 
-      Symbol* sym = scopeManager.lookup(token.lexeme);
+      Symbol *sym = scopeManager.lookup(token.lexeme);
       if (!sym) {
          throw CompilerError("Use of undeclared variable or name: " + token.lexeme,
                              token.line, token.column);
@@ -272,11 +280,23 @@ std::unique_ptr<Expr> Parser::declaration() {
       }
 
       std::string name = tokens[current - 1].lexeme;
-      const Token& token = tokens[current - 1];
-      Symbol sym(name, SymbolType::Variable, "auto", true, token.line, token.column);
+      const Token &token = tokens[current - 1];
 
-      if (!scopeManager.declare(sym)) {
-         throw CompilerError("Variable '" + name + "' already declared in this scope", token.line, token.column);
+      std::shared_ptr<Type> declaredType = std::make_shared<Type>(TypeKind::Unknown);
+
+      if (match(TokenType::SEMICOLON)) {
+         if (!match(TokenType::IDENTIFIER)) {
+            throw CompilerError("Expected type name after ':'", peek().line, peek().column);
+         }
+
+         std::string typeName = tokens[current - 1].lexeme;
+
+         if (typeName == "int") declaredType = std::make_shared<Type>(TypeKind::Int);
+         else if (typeName == "float")declaredType = std::make_shared<Type>(TypeKind::Float);
+         else if (typeName == "bool") declaredType = std::make_shared<Type>(TypeKind::Bool);
+         else if (typeName == "string")declaredType = std::make_shared<Type>(TypeKind::String);
+         else if (typeName == "null") declaredType = std::make_shared<Type>(TypeKind::Null);
+         else declaredType = std::make_shared<Type>(TypeKind::Custom, typeName);
       }
 
       std::unique_ptr<Expr> initializer = nullptr;
@@ -286,6 +306,11 @@ std::unique_ptr<Expr> Parser::declaration() {
 
       if (!match(TokenType::SEMICOLON)) {
          throw CompilerError("Expected ';' after variable declaration", peek().line, peek().column);
+      }
+
+      Symbol sym(name, SymbolType::Variable, declaredType, true, token.line, token.column);
+      if (!scopeManager.declare(sym)) {
+         throw CompilerError("Variable '" + name + "' already declared in this scope", token.line, token.column);
       }
 
       return std::make_unique<VarDeclarationExpr>(name, std::move(initializer));
@@ -339,7 +364,6 @@ std::unique_ptr<Expr> Parser::statement() {
 }
 
 std::unique_ptr<Expr> Parser::block() {
-   std::cout << "[DEBUG] Entering block() at token: " << peek().lexeme << "\n";
    if (!match(TokenType::LEFT_BRACE)) {
       throw CompilerError("Expected '{' at start of block", peek().line, peek().column);
    }
@@ -479,6 +503,7 @@ std::unique_ptr<Expr> Parser::functionDeclaration() {
    if (!match(TokenType::IDENTIFIER)) {
       throw CompilerError("Expected function name after 'function'", peek().line, peek().column);
    }
+
    std::string name = tokens[current - 1].lexeme;
 
    if (!match(TokenType::LEFT_PAREN)) {
@@ -486,27 +511,46 @@ std::unique_ptr<Expr> Parser::functionDeclaration() {
    }
 
    std::vector<std::string> params;
+   std::vector<std::shared_ptr<Type>> paramTypes;
 
    if (!check(TokenType::RIGHT_PAREN)) {
       do {
          if (!match(TokenType::IDENTIFIER)) {
             throw CompilerError("Expected parameter name", peek().line, peek().column);
          }
+
          std::string paramName = tokens[current - 1].lexeme;
 
-         Symbol paramSym(paramName, SymbolType::Parameter, "unknown", true,
+         auto paramType = std::make_shared<Type>(TypeKind::Unknown);
+
+         Symbol paramSym(paramName, SymbolType::Parameter, paramType, true,
                          tokens[current - 1].line, tokens[current - 1].column);
+
          if (!scopeManager.declare(paramSym)) {
             throw CompilerError("Parameter '" + paramName + "' already declared",
                                 tokens[current - 1].line, tokens[current - 1].column);
          }
 
          params.push_back(paramName);
+         paramTypes.push_back(std::move(paramType));
+
       } while (match(TokenType::COMMA));
    }
 
    if (!match(TokenType::RIGHT_PAREN)) {
       throw CompilerError("Expected ')' after function parameters", peek().line, peek().column);
+   }
+
+   auto returnType = std::make_shared<Type>(TypeKind::Unknown);
+
+   Symbol functionSym(name, SymbolType::Function,
+                      Type::makeFunction(paramTypes, returnType),
+                      false,
+                      tokens[current - 1].line,
+                      tokens[current - 1].column);
+
+   if (!scopeManager.declare(functionSym)) {
+      throw CompilerError("Function '" + name + "' already declared", peek().line, peek().column);
    }
 
    scopeManager.pushScope();
@@ -564,14 +608,12 @@ std::unique_ptr<Expr> Parser::switchStatement() {
          caseClauses.push_back(
                  std::make_unique<CaseClauseExpr>(std::move(caseValue), std::move(stmt))
          );
-      }
-      else if (match(TokenType::DEFAULT)) {
+      } else if (match(TokenType::DEFAULT)) {
          if (!match(TokenType::SEMICOLON)) {
             throw CompilerError("Expected ':' after 'default'", peek().line, peek().column);
          }
          defaultClause = statement();
-      }
-      else {
+      } else {
          throw CompilerError("Expected 'case' or 'default'", peek().line, peek().column);
       }
    }
@@ -638,8 +680,14 @@ std::unique_ptr<Expr> Parser::tryStatement() {
 
       scopeManager.pushScope();
 
-      Symbol catchSym(exceptionVarName, SymbolType::Variable, "unknown", true,
-                      tokens[current - 1].line, tokens[current - 1].column);
+      Symbol catchSym(
+              exceptionVarName,
+              SymbolType::Variable,
+              std::make_shared<Type>(TypeKind::Unknown),
+              true,
+              tokens[current - 1].line,
+              tokens[current - 1].column
+      );
 
       if (!scopeManager.declare(catchSym)) {
          throw CompilerError("Exception variable '" + exceptionVarName + "' already declared",

@@ -28,7 +28,6 @@ enum class ExprType : std::uint8_t {
     BlockStatement,
     ExpressionStatement,
     Assignment,
-    MatrixAssignment,
     MatrixMultiplication,
     SwitchStatement,
     CaseClause,
@@ -42,6 +41,8 @@ struct Expr {
     ExprType type;
 
     virtual ~Expr() = default;
+
+    [[nodiscard]] virtual std::string toString() const = 0;
 };
 
 struct LiteralExpr : Expr {
@@ -49,7 +50,22 @@ struct LiteralExpr : Expr {
 
     explicit LiteralExpr(std::variant<int, float, std::string, bool, std::nullptr_t> value)
             : value(std::move(value)) {
-       type = ExprType::Literal;
+       this->type = ExprType::Literal;
+    }
+
+    [[nodiscard]] std::string toString() const override {
+       return std::visit([](const auto &val) -> std::string {
+           using T = std::decay_t<decltype(val)>;
+           if constexpr (std::is_same_v<T, std::nullptr_t>) {
+              return "Literal(null)";
+           } else if constexpr (std::is_same_v<T, std::string>) {
+              return "Literal(\"" + val + "\")";
+           } else if constexpr (std::is_same_v<T, bool>) {
+              return std::string("Literal(") + (val ? "true" : "false") + ")";
+           } else {
+              return "Literal(" + std::to_string(val) + ")";
+           }
+       }, value);
     }
 };
 
@@ -58,6 +74,10 @@ struct IdentifierExpr : Expr {
 
     explicit IdentifierExpr(std::string name) : name(std::move(name)) {
        type = ExprType::Identifier;
+    }
+
+    [[nodiscard]] std::string toString() const override {
+       return "Identifier(" + name + ")";
     }
 };
 
@@ -70,6 +90,10 @@ struct BinaryExpr : Expr {
             : left(std::move(left)), op(std::move(op)), right(std::move(right)) {
        type = ExprType::Binary;
     }
+
+    [[nodiscard]] std::string toString() const override {
+       return "Binary(" + op + ", " + left->toString() + ", " + right->toString() + ")";
+    }
 };
 
 struct VarDeclarationExpr : Expr {
@@ -79,6 +103,10 @@ struct VarDeclarationExpr : Expr {
     VarDeclarationExpr(std::string name, std::unique_ptr<Expr> initializer)
             : name(std::move(name)), initializer(std::move(initializer)) {
        type = ExprType::VarDeclaration;
+    }
+
+    [[nodiscard]] std::string toString() const override {
+       return "VarDeclaration(" + name + (initializer ? ", " + initializer->toString() : "") + ")";
     }
 };
 
@@ -91,6 +119,17 @@ struct FunctionDeclarationExpr : Expr {
             : name(std::move(name)), params(std::move(params)), body(std::move(body)) {
        type = ExprType::FunctionDeclaration;
     }
+
+    [[nodiscard]] std::string toString() const override {
+       std::string result = "FunctionDeclaration(" + name + ", params: [";
+       for (size_t i = 0; i < params.size(); ++i) {
+          result += params[i];
+          if (i < params.size() - 1) result += ", ";
+       }
+       result += "]";
+       result += ", body: " + body->toString() + ")";
+       return result;
+    }
 };
 
 struct FunctionCallExpr : Expr {
@@ -100,6 +139,16 @@ struct FunctionCallExpr : Expr {
     FunctionCallExpr(std::string callee, std::vector<std::unique_ptr<Expr>> arguments)
             : callee(std::move(callee)), arguments(std::move(arguments)) {
        type = ExprType::FunctionCall;
+    }
+
+    [[nodiscard]] std::string toString() const override {
+       std::string result = "FunctionCall(" + callee + ", args: [";
+       for (size_t i = 0; i < arguments.size(); ++i) {
+          result += arguments[i]->toString();
+          if (i < arguments.size() - 1) result += ", ";
+       }
+       result += "])";
+       return result;
     }
 };
 
@@ -112,6 +161,13 @@ struct IfStatementExpr : Expr {
             : condition(std::move(condition)), thenBranch(std::move(thenBranch)), elseBranch(std::move(elseBranch)) {
        type = ExprType::IfStatement;
     }
+
+    [[nodiscard]] std::string toString() const override {
+       return "If(" + condition->toString() +
+              ", then: " + thenBranch->toString() +
+              (elseBranch ? ", else: " + elseBranch->toString() : "") +
+              ")";
+    }
 };
 
 struct WhileStatementExpr : Expr {
@@ -121,6 +177,10 @@ struct WhileStatementExpr : Expr {
     WhileStatementExpr(std::unique_ptr<Expr> condition, std::unique_ptr<Expr> body)
             : condition(std::move(condition)), body(std::move(body)) {
        type = ExprType::WhileStatement;
+    }
+
+    [[nodiscard]] std::string toString() const override {
+       return "While(" + condition->toString() + ", body: " + body->toString() + ")";
     }
 };
 
@@ -136,6 +196,13 @@ struct ForStatementExpr : Expr {
               body(std::move(body)) {
        type = ExprType::ForStatement;
     }
+
+    [[nodiscard]] std::string toString() const override {
+       return "For(init: " + (initializer ? initializer->toString() : "null") +
+              ", cond: " + (condition ? condition->toString() : "null") +
+              ", incr: " + (increment ? increment->toString() : "null") +
+              ", body: " + (body ? body->toString() : "null") + ")";
+    }
 };
 
 struct ReturnStatementExpr : Expr {
@@ -144,17 +211,29 @@ struct ReturnStatementExpr : Expr {
     explicit ReturnStatementExpr(std::unique_ptr<Expr> value) : value(std::move(value)) {
        type = ExprType::ReturnStatement;
     }
+
+    [[nodiscard]] std::string toString() const override {
+       return "Return(" + (value ? value->toString() : "void") + ")";
+    }
 };
 
 struct BreakStatementExpr : Expr {
     BreakStatementExpr() {
        type = ExprType::BreakStatement;
     }
+
+    [[nodiscard]] std::string toString() const override {
+       return "Break";
+    }
 };
 
 struct ContinueStatementExpr : Expr {
     ContinueStatementExpr() {
        type = ExprType::ContinueStatement;
+    }
+
+    [[nodiscard]] std::string toString() const override {
+       return "Continue";
     }
 };
 
@@ -165,6 +244,16 @@ struct BlockStatementExpr : Expr {
             : statements(std::move(statements)) {
        type = ExprType::BlockStatement;
     }
+
+    [[nodiscard]] std::string toString() const override {
+       std::string result = "Block(";
+       for (size_t i = 0; i < statements.size(); ++i) {
+          result += statements[i]->toString();
+          if (i < statements.size() - 1) result += ", ";
+       }
+       result += ")";
+       return result;
+    }
 };
 
 struct ExpressionStatementExpr : Expr {
@@ -173,6 +262,10 @@ struct ExpressionStatementExpr : Expr {
     explicit ExpressionStatementExpr(std::unique_ptr<Expr> expression)
             : expression(std::move(expression)) {
        type = ExprType::ExpressionStatement;
+    }
+
+    [[nodiscard]] std::string toString() const override {
+       return "ExprStmt: " + expression->toString();
     }
 };
 
@@ -184,15 +277,9 @@ struct AssignmentExpr : Expr {
             : name(std::move(name)), value(std::move(value)) {
        type = ExprType::Assignment;
     }
-};
 
-struct MatrixAssignmentExpr : Expr {
-    std::string name;
-    std::unique_ptr<Expr> value;
-
-    MatrixAssignmentExpr(std::string name, std::unique_ptr<Expr> value)
-            : name(std::move(name)), value(std::move(value)) {
-       type = ExprType::MatrixAssignment;
+    [[nodiscard]] std::string toString() const override {
+       return "Assign: " + name + " = " + value->toString();
     }
 };
 
@@ -203,6 +290,10 @@ struct MatrixMultiplicationExpr : Expr {
     MatrixMultiplicationExpr(std::unique_ptr<Expr> left, std::unique_ptr<Expr> right)
             : left(std::move(left)), right(std::move(right)) {
        type = ExprType::MatrixMultiplication;
+    }
+
+    [[nodiscard]] std::string toString() const override {
+       return "MatrixMultiply(" + left->toString() + ", " + right->toString() + ")";
     }
 };
 
@@ -217,6 +308,18 @@ struct SwitchStatementExpr : Expr {
               defaultClause(std::move(defaultClause)) {
        type = ExprType::SwitchStatement;
     }
+
+    [[nodiscard]] std::string toString() const override {
+       std::string result = "Switch(" + switchExpr->toString() + ") {\n";
+       for (const auto &clause: caseClauses) {
+          result += "  " + clause->toString() + "\n";
+       }
+       if (defaultClause) {
+          result += "  Default:\n    " + defaultClause->toString() + "\n";
+       }
+       result += "}";
+       return result;
+    }
 };
 
 struct CaseClauseExpr : Expr {
@@ -227,6 +330,10 @@ struct CaseClauseExpr : Expr {
             : caseExpr(std::move(caseExpr)), body(std::move(body)) {
        type = ExprType::CaseClause;
     }
+
+    [[nodiscard]] std::string toString() const override {
+       return "Case " + caseExpr->toString() + ": " + body->toString();
+    }
 };
 
 struct DoWhileStatementExpr : Expr {
@@ -236,6 +343,10 @@ struct DoWhileStatementExpr : Expr {
     DoWhileStatementExpr(std::unique_ptr<Expr> condition, std::unique_ptr<Expr> body)
             : condition(std::move(condition)), body(std::move(body)) {
        type = ExprType::DoWhileStatement;
+    }
+
+    [[nodiscard]] std::string toString() const override {
+       return "DoWhile(" + body->toString() + ") while (" + condition->toString() + ")";
     }
 };
 
@@ -250,15 +361,33 @@ struct TryCatchFinallyStatementExpr : Expr {
             : tryBlock(std::move(tryBlock)), catches(std::move(catches)), finallyBlock(std::move(finallyBlock)) {
        type = ExprType::TryCatchFinallyStatement;
     }
+
+    [[nodiscard]] std::string toString() const override {
+       std::string result = "Try {\n  " + tryBlock->toString() + "\n}";
+
+       for (const auto &c: catches) {
+          result += "\n" + c->toString();
+       }
+
+       if (finallyBlock) {
+          result += "\nFinally {\n  " + finallyBlock->toString() + "\n}";
+       }
+
+       return result;
+    }
 };
 
 struct CatchClauseExpr : Expr {
     std::string exceptionVarName;
-    std::unique_ptr<Expr> block; // The catch block
+    std::unique_ptr<Expr> block;
 
     CatchClauseExpr(std::string exceptionVarName, std::unique_ptr<Expr> block)
             : exceptionVarName(std::move(exceptionVarName)), block(std::move(block)) {
        type = ExprType::CatchClause;
+    }
+
+    [[nodiscard]] std::string toString() const override {
+       return "Catch(" + exceptionVarName + ") {\n  " + block->toString() + "\n}";
     }
 };
 
@@ -270,7 +399,10 @@ struct UnaryExpr : Expr {
             : op(std::move(op)), right(std::move(right)) {
        type = ExprType::Unary;
     }
-};
 
+    [[nodiscard]] std::string toString() const override {
+       return "Unary: " + op + " " + right->toString();
+    }
+};
 
 #endif //COMPILER_AST_H

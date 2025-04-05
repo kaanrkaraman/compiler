@@ -13,12 +13,12 @@
 struct Scope {
     std::unordered_map<std::string, Symbol> symbols;
 
-    bool declare(const Symbol& sym) {
+    bool declare(const Symbol &sym) {
        auto [it, inserted] = symbols.insert({sym.name, sym});
        return inserted;
     }
 
-    Symbol* findLocal(const std::string &name) {
+    Symbol *findLocal(const std::string &name) {
        auto it = symbols.find(name);
        if (it != symbols.end()) {
           return &it->second;

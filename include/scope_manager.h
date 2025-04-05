@@ -5,7 +5,6 @@
 #ifndef COMPILER_SCOPE_MANAGER_H
 #define COMPILER_SCOPE_MANAGER_H
 
-
 #include <stack>
 #include "scope.h"
 
