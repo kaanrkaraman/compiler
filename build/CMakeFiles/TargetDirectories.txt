@@ -1,9 +1,0 @@
-/Users/kaan/Desktop/Files/Kod/C++/Compiler/build/CMakeFiles/compiler_lib.dir
-/Users/kaan/Desktop/Files/Kod/C++/Compiler/build/CMakeFiles/Compiler.dir
-/Users/kaan/Desktop/Files/Kod/C++/Compiler/build/CMakeFiles/test.dir
-/Users/kaan/Desktop/Files/Kod/C++/Compiler/build/CMakeFiles/edit_cache.dir
-/Users/kaan/Desktop/Files/Kod/C++/Compiler/build/CMakeFiles/rebuild_cache.dir
-/Users/kaan/Desktop/Files/Kod/C++/Compiler/build/tests/CMakeFiles/CompilerTests.dir
-/Users/kaan/Desktop/Files/Kod/C++/Compiler/build/tests/CMakeFiles/test.dir
-/Users/kaan/Desktop/Files/Kod/C++/Compiler/build/tests/CMakeFiles/edit_cache.dir
-/Users/kaan/Desktop/Files/Kod/C++/Compiler/build/tests/CMakeFiles/rebuild_cache.dir
