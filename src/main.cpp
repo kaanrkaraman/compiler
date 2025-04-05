@@ -1,6 +1,6 @@
 #include <iostream>
 
-#include "lexer.h"
+#include "tokenizer.h"
 #include "token_type.h"
 #include "parser.h"
 
@@ -136,6 +136,34 @@ void printExpr(const Expr* expr, int indent) {
          printExpr(assign->value.get(), indent + 1);
          break;
       }
+      case ExprType::TryCatchFinallyStatement: {
+         auto* tryCatch = dynamic_cast<const TryCatchFinallyStatementExpr*>(expr);
+         printIndent(indent); std::cout << "TryCatch:\n";
+         printExpr(tryCatch->tryBlock.get(), indent + 1);
+         for (const auto& catchClause : tryCatch->catches) {
+            printExpr(catchClause.get(), indent + 1);
+         }
+         if (tryCatch->finallyBlock) {
+            printIndent(indent + 1); std::cout << "Finally:\n";
+            printExpr(tryCatch->finallyBlock.get(), indent + 2);
+         }
+         break;
+      }
+      case ExprType::DoWhileStatement: {
+         auto* doWhile = dynamic_cast<const DoWhileStatementExpr*>(expr);
+         printIndent(indent); std::cout << "DoWhile:\n";
+         printIndent(indent + 1); std::cout << "Condition:\n";
+         printExpr(doWhile->condition.get(), indent + 2);
+         printIndent(indent + 1); std::cout << "Body:\n";
+         printExpr(doWhile->body.get(), indent + 2);
+         break;
+      }
+      case ExprType::Unary: {
+         auto* unary = dynamic_cast<const UnaryExpr*>(expr);
+         printIndent(indent); std::cout << "Unary: " << unary->op << "\n";
+         printExpr(unary->right.get(), indent + 1);
+         break;
+      }
       default:
          printIndent(indent); std::cout << "Unknown node type\n";
          break;
@@ -143,51 +171,26 @@ void printExpr(const Expr* expr, int indent) {
 }
 #pragma clang diagnostic pop
 
-[[maybe_unused]] std::string tokenTypeToString(TokenType type) {
-   switch (type) {
-      case TokenType::IF: return "IF";
-      case TokenType::ELSE: return "ELSE";
-      case TokenType::IDENTIFIER: return "IDENTIFIER";
-      case TokenType::INTEGER_LITERAL: return "INTEGER_LITERAL";
-      case TokenType::STRING_LITERAL: return "STRING_LITERAL";
-      case TokenType::PLUS: return "PLUS";
-      case TokenType::EQUAL: return "EQUAL";
-      case TokenType::LEFT_PAREN: return "LEFT_PAREN";
-      case TokenType::RIGHT_PAREN: return "RIGHT_PAREN";
-      case TokenType::END_OF_FILE: return "EOF";
-      case TokenType::VAR: return "VAR";
-      case TokenType::ASSIGN: return "ASSIGN";
-      case TokenType::SEMICOLON: return "SEMICOLON";
-      case TokenType::GREATER_THAN: return "GREATER_THAN";
-      case TokenType::LEFT_BRACE: return "LEFT_BRACE";
-      case TokenType::RIGHT_BRACE: return "RIGHT_BRACE";
-      case TokenType::FOR: return "FOR";
-      case TokenType::LESS_THAN: return "LESS_THAN";
-      default: return "UNKNOWN";
-   }
-}
-
 int main() {
    std::string sourceCode = R"(
-i = 0;
-for (i = 0; i < 10; i = i + 1) {
-    print(i);
+try {
+   var x = 10;
+   var y = 20;
+   var z = x + y;
+   print(z);
+} catch (e) {
+   print("Error: " + e);
+} finally {
+   print("Done");
 }
-    )";
+)";
 
    Tokenizer tokenizer(sourceCode);
    std::vector<Token> tokens = tokenizer.tokenize();
 
-   for (const auto& token : tokens) {
-      std::cout << "Token: "
-                << tokenTypeToString(token.type)
-                << " | Lexeme: '" << token.lexeme << "'"
-                << " | Line: " << token.line
-                << " | Column: " << token.column
-                << "\n";
-   }
-
    Parser parser(tokens);
+   Symbol printFunc("print", SymbolType::Function, "void", true, 0, 0);
+   parser.scopeManager.declare(printFunc);
    std::unique_ptr<Expr> ast = parser.parse();
 
    if (ast) {

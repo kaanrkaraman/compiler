@@ -1,13 +1,13 @@
 //
-// Created by Kaan Karaman on 04/04/2025.
+// Created by Kaan Karaman on 05/04/2025.
 //
 
 #include <cctype>
 #include <unordered_map>
-#include <iostream>
 
 #include "token_type.h"
-#include "lexer.h"
+#include "tokenizer.h"
+#include "error.h"
 
 Tokenizer::Tokenizer(const std::string &source)
         : source(source) {}
@@ -117,7 +117,7 @@ std::vector<Token> Tokenizer::tokenize() {
 
 
          default:
-            std::cerr << "[WARNING] Skipping unrecognized character: " << (int)(unsigned char)c << "\n";
+            // TODO: Handle unknown characters
             advance();
             continue;
       }
@@ -249,6 +249,15 @@ Token Tokenizer::identifier() {
            {"float",    TokenType::FLOAT},
            {"string",   TokenType::STRING},
            {"bool",     TokenType::BOOL},
+           {"do",       TokenType::DO},
+           {"break",    TokenType::BREAK},
+           {"continue", TokenType::CONTINUE},
+           {"switch",   TokenType::SWITCH},
+           {"case",     TokenType::CASE},
+           {"default",  TokenType::DEFAULT},
+           {"try",      TokenType::TRY},
+           {"catch",    TokenType::CATCH},
+           {"finally",  TokenType::FINALLY},
    };
 
    auto it = keywords.find(lexeme);

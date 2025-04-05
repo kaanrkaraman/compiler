@@ -15,6 +15,7 @@ enum class TokenType : std::uint8_t {
     // Keywords
     IF,
     ELSE,
+    DO,
     WHILE,
     FOR,
     RETURN,
@@ -22,6 +23,12 @@ enum class TokenType : std::uint8_t {
     CONTINUE,
     FUNCTION,
     VAR,
+    SWITCH,
+    CASE,
+    DEFAULT,
+    TRY,
+    CATCH,
+    FINALLY,
 
     // Data types
     INT,
@@ -35,8 +42,10 @@ enum class TokenType : std::uint8_t {
     MULTIPLY, // *
     DIVIDE, // /
     ASSIGN, // =
-    MATRIX_ASSIGN, // :=
     MATRIX_MULTIPLY, // @
+    INCREMENT, // ++
+    DECREMENT, // --
+    BANG, // !
 
     // Delimiters
     SEMICOLON,
@@ -64,7 +73,6 @@ enum class TokenType : std::uint8_t {
     // Comparison operators
     EQUAL, // ==
     NOT_EQUAL, // !=
-    STRICT_EQUAL, // ===
     STRICT_NOT_EQUAL, // !==
     GREATER_THAN, // >
     LESS_THAN, // <
